@@ -41,10 +41,29 @@ class AccountMove(models.Model):
     def action_reconcile_payment_entries(self):
         self.ensure_one()
         self._check_payment_allowed()
+        
+        # payment = self.env["account.payment"].create(payment_vals)
 
         payment_entries = self.env["invoice.payment.entry"].search(
             [("invoice_id", "=", self.id)]
         )
+        for payment in payment_entries:
+            payment_vals = {
+                "payment_type": "inbound",
+                "partner_type": "customer",
+                "partner_id": self.partner_id.id,
+                "amount": payment.amount,
+                "currency_id": self.currency_id.id,
+                "date": payment.payment_date,
+                "journal_id": payment.journal_id.id,
+                "payment_method_line_id": payment.payment_method_line_id.id,
+                # "payment_reference": self.communication or invoice.name,
+                "company_id": self.company_id.id,
+                }
+
+            payment_id = self.env["account.payment"].create(payment_vals)
+            payment.payment_id = payment_id.id
+        print()
         if not payment_entries:
             raise ValidationError("No payment entries were found for this invoice.")
 

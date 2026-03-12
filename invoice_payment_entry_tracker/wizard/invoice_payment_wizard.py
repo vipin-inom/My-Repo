@@ -53,24 +53,25 @@ class InvoicePaymentWizard(models.TransientModel):
             "payment_reference": self.communication or invoice.name,
             "company_id": invoice.company_id.id,
         }
-        payment = self.env["account.payment"].create(payment_vals)
-        payment.action_post()
+        # payment = self.env["account.payment"].create(payment_vals)
+        # payment.action_post()
 
-        self.env["invoice.payment.entry"].create(
+        invoice_payment=self.env["invoice.payment.entry"].create(
             {
                 "invoice_id": invoice.id,
-                "payment_id": payment.id,
-                "amount": payment.amount,
-                "currency_id": payment.currency_id.id,
-                "payment_date": payment.date,
-                "journal_id": payment.journal_id.id,
+                # "payment_id": payment.id,
+                "amount": self.amount,
+                "currency_id": invoice.currency_id.id,
+                "payment_date": self.payment_date,
+                "journal_id": self.journal_id.id,
+                "payment_method_line_id":self.payment_method_line_id.id,
             }
         )
 
         receivable_lines = invoice.line_ids.filtered(
             lambda line: line.account_type == "asset_receivable" and not line.reconciled
         )
-        payment_lines = payment.move_id.line_ids.filtered(
+        payment_lines = invoice_payment.invoice_id.line_ids.filtered(
             lambda line: line.account_type == "asset_receivable" and not line.reconciled
         )
         (receivable_lines + payment_lines).reconcile()

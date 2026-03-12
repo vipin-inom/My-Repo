@@ -8,13 +8,18 @@ class InvoicePaymentEntry(models.Model):
 
     name = fields.Char(required=True, copy=False, readonly=True, default=lambda self: _("New"))
     invoice_id = fields.Many2one("account.move", required=True, ondelete="cascade")
-    payment_id = fields.Many2one("account.payment", required=True, ondelete="cascade")
+    payment_id = fields.Many2one("account.payment", ondelete="cascade")
     partner_id = fields.Many2one("res.partner", related="invoice_id.partner_id", store=True)
     amount = fields.Monetary(required=True)
     currency_id = fields.Many2one("res.currency", required=True)
     payment_date = fields.Date(required=True)
     journal_id = fields.Many2one("account.journal", required=True)
     state = fields.Selection(related="payment_id.state", store=True)
+    payment_method_line_id = fields.Many2one(
+        "account.payment.method.line",
+        required=True,
+        domain="[('journal_id', '=', journal_id)]",
+    )
 
     def action_open_payment(self):
         self.ensure_one()
