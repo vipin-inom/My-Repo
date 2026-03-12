@@ -1,4 +1,4 @@
-from odoo import _, fields, models
+from odoo import _, api, fields, models
 
 
 class InvoicePaymentEntry(models.Model):
@@ -36,7 +36,7 @@ class InvoicePaymentEntry(models.Model):
             "target": "current",
         }
 
-    @models.model_create_multi
+    @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
             if not vals.get("name") or vals["name"] == _("New"):
