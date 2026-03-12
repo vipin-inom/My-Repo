@@ -1,4 +1,4 @@
-from odoo import fields, models
+from odoo import api, fields, models
 from odoo.exceptions import ValidationError
 
 
@@ -6,6 +6,11 @@ class AccountMove(models.Model):
     _inherit = "account.move"
 
     payment_entry_count = fields.Integer(compute="_compute_payment_entry_count")
+    payment_entry_due_amount = fields.Monetary(
+        string="Remaining Due",
+        compute="_compute_payment_entry_due_amount",
+        currency_field="currency_id",
+    )
 
     def _compute_payment_entry_count(self):
         grouped = self.env["invoice.payment.entry"].read_group(
@@ -16,6 +21,19 @@ class AccountMove(models.Model):
         count_map = {row["invoice_id"][0]: row["invoice_id_count"] for row in grouped}
         for move in self:
             move.payment_entry_count = count_map.get(move.id, 0)
+
+
+    @api.depends("amount_total", "amount_residual", "state")
+    def _compute_payment_entry_due_amount(self):
+        grouped = self.env["invoice.payment.entry"].read_group(
+            [("invoice_id", "in", self.ids)],
+            ["invoice_id", "amount:sum"],
+            ["invoice_id"],
+        )
+        paid_map = {row["invoice_id"][0]: row["amount"] for row in grouped}
+        for move in self:
+            paid_amount = paid_map.get(move.id, 0.0)
+            move.payment_entry_due_amount = max(move.amount_total - paid_amount, 0.0)
 
     def action_open_invoice_payment_wizard(self):
         self.ensure_one()
