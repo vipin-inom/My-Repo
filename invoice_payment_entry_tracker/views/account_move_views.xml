@@ -13,6 +13,13 @@
                     class="btn-primary"
                     invisible="move_type != 'out_invoice' or state != 'posted'"
                 />
+                <button
+                    name="action_reconcile_payment_entries"
+                    type="object"
+                    string="Reconcile Payments"
+                    class="btn-secondary"
+                    invisible="move_type != 'out_invoice' or state != 'posted' or payment_state == 'paid'"
+                />
             </xpath>
             <xpath expr="//div[hasclass('oe_button_box')]" position="inside">
                 <button

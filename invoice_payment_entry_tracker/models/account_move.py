@@ -38,6 +38,39 @@ class AccountMove(models.Model):
         action["context"] = {"default_invoice_id": self.id}
         return action
 
+    def action_reconcile_payment_entries(self):
+        self.ensure_one()
+        self._check_payment_allowed()
+
+        payment_entries = self.env["invoice.payment.entry"].search(
+            [("invoice_id", "=", self.id)]
+        )
+        if not payment_entries:
+            raise ValidationError("No payment entries were found for this invoice.")
+
+        payments = payment_entries.mapped("payment_id").filtered(
+            lambda payment: payment.state != "cancel"
+        )
+        if not payments:
+            raise ValidationError("No valid payments were found to reconcile.")
+
+        draft_payments = payments.filtered(lambda payment: payment.state == "draft")
+        if draft_payments:
+            draft_payments.action_post()
+
+        receivable_lines = self.line_ids.filtered(
+            lambda line: line.account_type == "asset_receivable" and not line.reconciled
+        )
+        payment_lines = payments.mapped("move_id.line_ids").filtered(
+            lambda line: line.account_type == "asset_receivable" and not line.reconciled
+        )
+
+        lines_to_reconcile = receivable_lines + payment_lines
+        if not lines_to_reconcile:
+            raise ValidationError("There are no outstanding receivable lines to reconcile.")
+
+        lines_to_reconcile.reconcile()
+
     def _check_payment_allowed(self):
         self.ensure_one()
         if self.move_type != "out_invoice":
